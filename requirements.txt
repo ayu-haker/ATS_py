@@ -1,0 +1,5 @@
+streamlit
+python-docx
+pdfplumber
+matplotlib
+nltk
