@@ -82,9 +82,10 @@ pipeline {
 
         stage('Docker Push') {
             steps {
-                withCredentials([string(
+                withCredentials([usernamePassword(
                     credentialsId: 'docker-hub-credentials',
-                    variable: 'DOCKERHUB_PASS'
+                    usernameVariable: 'DOCKERHUB_USER',
+                    passwordVariable: 'DOCKERHUB_PASS'
                 )]) {
                     sh '''
                         echo "$DOCKERHUB_PASS" | docker login \
