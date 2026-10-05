@@ -23,8 +23,8 @@ pipeline {
                     withSonarQubeEnv("${SONAR_SERVER}") {
                         sh """
                         ${scannerHome}/bin/sonar-scanner \
-                        -Dsonar.projectKey=ATS_py \
-                        -Dsonar.projectName='ATS_py' \
+                        -Dsonar.projectKey=ATS_py-ayu \
+                        -Dsonar.projectName='ATS_py-ayu' \
                         -Dsonar.sources=. \
                         -Dsonar.sourceEncoding=UTF-8
                         """
