@@ -8,15 +8,9 @@ pipeline {
     }
 
     environment {
-        SONAR_SERVER = 'sonar-server'
-        SONAR_SCANNER = 'sonar-scanner'
-
-        APP_NAME = 'ats-py-ayu'
         IMAGE_NAME = 'ats-py-ayu'
         CONTAINER_NAME = 'ats-py-ayu'
-
         APP_PORT = '8501'
-        SONAR_URL = 'http://65.2.56.162:9000'
     }
 
     stages {
@@ -52,14 +46,21 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv("${SONAR_SERVER}") {
+                withSonarQubeEnv('sonar-server') {
                     sh '''
                         set -e
 
                         echo "===== SonarQube Analysis ====="
                         echo "SonarQube Server: ${SONAR_HOST_URL}"
 
-                        ${SONAR_SCANNER}/bin/sonar-scanner \
+                        SCANNER="/var/lib/jenkins/tools/hudson.plugins.sonar.SonarRunnerInstallation/sonar-scanner/bin/sonar-scanner"
+
+                        echo "===== Checking SonarScanner ====="
+                        "${SCANNER}" --version
+
+                        echo "===== Running SonarQube Scanner ====="
+
+                        "${SCANNER}" \
                           -Dsonar.projectKey=ATS_py-ayu \
                           -Dsonar.projectName=ATS_py-ayu \
                           -Dsonar.sources=. \
@@ -75,13 +76,13 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
-                echo 'Waiting for SonarQube Quality Gate...'
+                echo "===== Waiting for SonarQube Quality Gate ====="
 
                 timeout(time: 10, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
 
-                echo '===== Quality Gate Passed ====='
+                echo "===== Quality Gate Passed ====="
             }
         }
 
