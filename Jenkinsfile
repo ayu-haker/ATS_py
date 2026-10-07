@@ -19,23 +19,32 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-
         stage('Python Validation') {
             steps {
                 sh '''
-                    echo "Checking Python installation..."
+                    set -e
+
+                    echo "======================================"
+                    echo "Python Validation"
+                    echo "======================================"
+
                     python3 --version
 
+                    echo "Creating virtual environment..."
+                    rm -rf .venv
+                    python3 -m venv .venv
+
+                    echo "Activating virtual environment..."
+                    . .venv/bin/activate
+
+                    echo "Upgrading pip..."
+                    python -m pip install --upgrade pip
+
                     echo "Installing dependencies..."
-                    python3 -m pip install --user -r requirements.txt
+                    pip install -r requirements.txt
 
                     echo "Checking Python syntax..."
-                    python3 -m compileall -q .
+                    python -m compileall -q .
 
                     echo "Python validation completed successfully."
                 '''
@@ -54,8 +63,8 @@ pipeline {
                             -Dsonar.projectName=ATS_py-ayu \
                             -Dsonar.sources=. \
                             -Dsonar.sourceEncoding=UTF-8 \
-                            -Dsonar.python.version=3.11 \
-                            -Dsonar.exclusions=**/.git/**,**/__pycache__/**,**/*.pyc,**/venv/**,**/.venv/**
+                            -Dsonar.python.version=3.14 \
+                            -Dsonar.exclusions=**/.git/**,**/.venv/**,**/__pycache__/**,**/*.pyc
                         """
                     }
                 }
@@ -73,13 +82,18 @@ pipeline {
         stage('Docker Build') {
             steps {
                 sh '''
-                    echo "Building Docker image..."
+                    set -e
+
+                    echo "======================================"
+                    echo "Docker Build"
+                    echo "======================================"
 
                     docker build \
                         -t ${IMAGE_NAME}:${BUILD_NUMBER} \
                         -t ${IMAGE_NAME}:latest .
 
                     echo "Docker image built successfully."
+
                     docker images | grep ${IMAGE_NAME}
                 '''
             }
@@ -88,8 +102,13 @@ pipeline {
         stage('Docker Deploy') {
             steps {
                 sh '''
-                    echo "Stopping previous container if running..."
+                    set -e
 
+                    echo "======================================"
+                    echo "Docker Deploy"
+                    echo "======================================"
+
+                    echo "Stopping old container..."
                     docker rm -f ${CONTAINER_NAME} 2>/dev/null || true
 
                     echo "Starting new container..."
@@ -100,13 +119,13 @@ pipeline {
                         -p ${APP_PORT}:8501 \
                         ${IMAGE_NAME}:${BUILD_NUMBER}
 
-                    echo "Waiting for application to start..."
+                    echo "Waiting for application..."
                     sleep 10
 
-                    echo "Checking container status..."
+                    echo "Checking container..."
                     docker ps --filter "name=${CONTAINER_NAME}"
 
-                    echo "Application deployed successfully."
+                    echo "Docker deployment successful."
                 '''
             }
         }
@@ -123,8 +142,13 @@ pipeline {
         }
 
         failure {
+            echo '======================================'
             echo 'ATS_py CI/CD PIPELINE FAILED'
-            sh 'docker logs ${CONTAINER_NAME} --tail 50 2>/dev/null || true'
+            echo '======================================'
+
+            sh '''
+                docker logs ${CONTAINER_NAME} --tail 50 2>/dev/null || true
+            '''
         }
 
         always {
